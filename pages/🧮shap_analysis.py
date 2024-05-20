@@ -14,19 +14,29 @@ from plotly import graph_objects as go
 
 
 
-def load_model(X, y):
+def load_model(X, y, model_type):
     # split data into train and test sets
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=7)
     d_train = xgboost.DMatrix(X_train, label=y_train)
     d_test = xgboost.DMatrix(X_test, label=y_test)
-    params = {
-        "eta": 0.01,
-        "objective": "reg:linear",
-        "subsample": 0.5,
-        "base_score": np.mean(y_train),
-        "eval_metric": "rmse",
-        "n_jobs": -1,
-    }
+    if model_type=='回归':
+        params = {
+            "eta": 0.01,
+            "objective": "reg:linear",
+            "subsample": 0.5,
+            "base_score": np.mean(y_train),
+            "eval_metric": "rmse",
+            "n_jobs": -1,
+        }
+    else:
+        params = {
+            "eta": 0.01,
+            "objective": "binary:logistic",
+            "subsample": 0.5,
+            "base_score": np.mean(y_train),
+            "eval_metric": "auc",
+            "n_jobs": -1,
+        }
     model = xgboost.train(params, d_train, 10, evals = [(d_test, "test")], verbose_eval=100, early_stopping_rounds=20)
     return model
 
@@ -39,7 +49,8 @@ if __name__ == '__main__':
     X_display,y_display = X,y
 
     # st.write(X_display)
-    model = load_model(X,y)#load_model(X, y)
+    model_type=st.radio('模型类别选择', ('回归', '分类'),horizontal=True)
+    model = load_model(X,y,model_type=model_type)#load_model(X, y)
 
     # compute SHAP values
     explainer = shap.Explainer(model, X)
@@ -86,7 +97,7 @@ if __name__ == '__main__':
         fig2.add_trace(go.Scatter(x=plot_data[select_var],y=plot_data['spline'],mode='lines',name='spline',line=dict(color='red')))
         
         annotation_number=st.number_input("竖线位置", min_value=0.0, max_value=float(max(plot_data[select_var])), value=float(np.median(plot_data[select_var])), step=1.0)
-        annotation_number2=st.number_input("竖线位置", min_value=0.0, max_value=float(max(plot_data[select_var])), value=float(np.mean(plot_data[select_var])), step=1.0)
+        annotation_number2=st.number_input("竖线位置", min_value=0.0, max_value=float(max(plot_data[select_var])), value=5+float(np.median(plot_data[select_var])), step=1.0)
 
         fig2.add_vline(x=annotation_number, line_dash='dash', annotation_text='{}'.format(annotation_number))
         fig2.add_vline(x=annotation_number2, line_dash='dash', annotation_text='{}'.format(annotation_number2))

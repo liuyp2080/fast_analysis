@@ -23,6 +23,7 @@ from arfs.preprocessing import OrdinalEncoderPandas
 if __name__ == '__main__':
     st.title("🔎变量筛选")
     model_type=st.radio('模型类别选择', ('回归', '分类'),horizontal=True)
+
     upload_file=st.file_uploader('上传数据' , type=['csv'], key='upload_file')
     if upload_file is not None:
         data = pd.read_csv(upload_file)

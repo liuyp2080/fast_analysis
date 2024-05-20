@@ -57,9 +57,9 @@ if __name__ == '__main__':
             model_lg = LGBMClassifier(random_state=42, verbose=-1)
             
         st.header(' Leshy 算法（来自python-arfs包）')
-        importance=st.radio('算法中重要性参数', ('naive','shap' ),horizontal=True)
+        # importance=st.radio('算法中重要性参数', ('naive'),horizontal=True)
         feat_selector = arfsgroot.Leshy(
-            model_lg, n_estimators=20, verbose=1, max_iter=10, random_state=42, importance=importance
+            model_lg, n_estimators=20, verbose=1, max_iter=10, random_state=42, importance='naive'
         )
         feat_selector.fit(X, y, sample_weight=None)
         

@@ -19,10 +19,12 @@ import matplotlib.pyplot as plt
 from arfs.preprocessing import OrdinalEncoderPandas
 
 
-
 if __name__ == '__main__':
+
     st.title("🔎变量筛选")
-    model_type=st.radio('模型类别选择', ('回归', '分类'),horizontal=True)
+    model_type=st.radio('模型类别选择', ('回归', '二分类'),horizontal=True)
+    if model_type not in st.session_state:
+        st.session_state.model_type = model_type
 
     upload_file=st.file_uploader('上传数据' , type=['csv'], key='upload_file')
     if upload_file is not None:
@@ -35,6 +37,10 @@ if __name__ == '__main__':
         
     X_drop=st.multiselect('排除的指标（比如编号等）', data.columns)
     outcome=st.selectbox('选择结局指标（其它指标作为预测指标）', data.columns)
+    if 'outcome' not in st.session_state:
+        st.session_state.outcome = outcome
+    else:
+        st.session_state.outcome = outcome
     
     data=data.drop(X_drop, axis=1)
     

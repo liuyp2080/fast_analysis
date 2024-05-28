@@ -98,8 +98,8 @@ if __name__ == '__main__':
         plot_data=plot_data.sort_values(by=select_var)
         #95%置信区间
 
-        data = go.Scatter(x=plot_data[select_var],y=plot_data['shap_'+select_var],mode='markers',name='shap_'+select_var)
-        fig2 = go.Figure(data) 
+        data_scatter = go.Scatter(x=plot_data[select_var],y=plot_data['shap_'+select_var],mode='markers',name='shap_'+select_var)
+        fig2 = go.Figure(data_scatter,layout=go.Layout(title=go.layout.Title(text='shap_'+select_var+"的限制性立方样条拟合"))) 
         fig2.add_trace(go.Scatter(x=plot_data[select_var],y=plot_data['spline'],mode='lines',name='spline',line=dict(color='red')))
         
         annotation_number=st.number_input("竖线位置", min_value=0.0, max_value=float(max(plot_data[select_var])), value=float(np.median(plot_data[select_var])), step=1.0)
@@ -122,7 +122,6 @@ if __name__ == '__main__':
     else:
         st.session_state.interaction_values = interaction_values
     
-    
     # shap_values_tree = explainer_tree.shap_values(X)
     # with st.container():
     #     num=st.number_input('选择前几个样本', min_value=0, max_value=X.shape[0]-1, value=1, step=1, key='sample_num')
@@ -136,6 +135,7 @@ if __name__ == '__main__':
         key_num=st.number_input('关键转折点', min_value=min(plot_data[select_var]), max_value=max(plot_data[select_var]),  value=np.median(plot_data[select_var]), step=1.0)
         direction=st.radio('拟合方向',('关键点之前','关键点之后'),horizontal=True)
         outcome=st.session_state.outcome
+        
         df_liner=pd.concat([st.session_state.X[selected_features],st.session_state.y],axis=1)
         #筛选数据，使用原始数据，而不是SHAP数据
         if direction=='关键点之前':
@@ -148,6 +148,6 @@ if __name__ == '__main__':
         model_liner_fit=load_model_liner(X_liner,y_liner,model_type)
         st.write(model_liner_fit.summary())
         
-        plot=px.scatter(data_frame=df_liner,x=select_var,y=outcome)
+        plot=px.scatter(data_frame=df_liner,x=select_var,y=outcome,title='原始数据的散点图')
         st.plotly_chart(plot)
             

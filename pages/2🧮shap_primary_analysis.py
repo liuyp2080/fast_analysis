@@ -40,12 +40,9 @@ def load_model(X, y, model_type):
     model = xgboost.train(params, d_train, 10, evals = [(d_test, "test")], verbose_eval=100, early_stopping_rounds=20)
     return model
 
-def load_model_liner(X, y,model_type):
-    if model_type=='回归': 
-        model = sm.OLS(y, X).fit()
-        
-    else:
-        model=sm.GLM(y,X,family=sm.families.Binomial()).fit()
+def load_model_liner(X, y):
+    model = sm.OLS(y, X).fit()
+    
     return model
 if __name__ == '__main__':
     st.title("🧮SHAP 分析")
@@ -68,6 +65,8 @@ if __name__ == '__main__':
     '***'
     with st.container():
         select_var=st.selectbox('选择变量',X.columns)
+        if 'select_var' not in st.session_state:
+            st.session_state['select_var'] = select_var
 
         st_shap(shap.plots.scatter(shap_values[:,select_var],))
         '说明：SHAP分析的单个变量的散点图，展示某个特征的SHAP值。'
@@ -92,27 +91,27 @@ if __name__ == '__main__':
         model_spline.fit(x_spline.reshape(-1, 1), y_spline)
         y_plot = model_spline.predict(x_spline.reshape(-1, 1))
       
-        
-        plot_data=pd.DataFrame({select_var:shap_values[:,select_var].data,'shap_'+select_var:shap_values[:,select_var].values,'spline':y_plot})
-        # plot_data_melt=pd.melt(plot_data,id_vars=[select_var])
-        plot_data=plot_data.sort_values(by=select_var)
-        #95%置信区间
+        #仅仅是单个变量的plot数据
+        single_plot_data=pd.DataFrame({select_var:shap_values[:,select_var].data,'shap_'+select_var:shap_values[:,select_var].values,'spline':y_plot})
+        # single_plot_data_melt=pd.melt(single_plot_data,id_vars=[select_var])
+        single_plot_data=single_plot_data.sort_values(by=select_var)
 
-        data_scatter = go.Scatter(x=plot_data[select_var],y=plot_data['shap_'+select_var],mode='markers',name='shap_'+select_var)
+        data_scatter = go.Scatter(x=single_plot_data[select_var],y=single_plot_data['shap_'+select_var],mode='markers',name='shap_'+select_var)
         fig2 = go.Figure(data_scatter,layout=go.Layout(title=go.layout.Title(text='shap_'+select_var+"的限制性立方样条拟合"))) 
-        fig2.add_trace(go.Scatter(x=plot_data[select_var],y=plot_data['spline'],mode='lines',name='spline',line=dict(color='red')))
+        fig2.add_trace(go.Scatter(x=single_plot_data[select_var],y=single_plot_data['spline'],mode='lines',name='spline',line=dict(color='red')))
         
-        annotation_number=st.number_input("竖线位置", min_value=0.0, max_value=float(max(plot_data[select_var])), value=float(np.median(plot_data[select_var])), step=1.0)
-        annotation_number2=st.number_input("竖线位置", min_value=0.0, max_value=float(max(plot_data[select_var])), value=5+float(np.median(plot_data[select_var])), step=1.0)
+        annotation_number=st.number_input("竖线位置", min_value=0.0, max_value=float(max(single_plot_data[select_var])), value=float(np.median(single_plot_data[select_var])), step=1.0)
+        annotation_number2=st.number_input("竖线位置", min_value=0.0, max_value=float(max(single_plot_data[select_var])), value=5+float(np.median(single_plot_data[select_var])), step=1.0)
 
         fig2.add_vline(x=annotation_number, line_dash='dash', annotation_text='{}'.format(annotation_number))
         fig2.add_vline(x=annotation_number2, line_dash='dash', annotation_text='{}'.format(annotation_number2))
         # Add the 95% CI as a shaded region
-        # fig2.add_trace(go.Scatter(x=plot_data[select_var], y=ci_lower, mode='lines', name='CI lower', line=dict(color='rgba(0, 0, 255, 0.2)')))
-        # fig2.add_trace(go.Scatter(x=plot_data[select_var], y=ci_upper, mode='lines', name='CI upper', line=dict(color='rgba(0, 0, 255, 0.2)')))
+        # fig2.add_trace(go.Scatter(x=single_plot_data[select_var], y=ci_lower, mode='lines', name='CI lower', line=dict(color='rgba(0, 0, 255, 0.2)')))
+        # fig2.add_trace(go.Scatter(x=single_plot_data[select_var], y=ci_upper, mode='lines', name='CI upper', line=dict(color='rgba(0, 0, 255, 0.2)')))
 
         st.plotly_chart(fig2)
-        '说明：限制性立方样条曲线拟合以上的散点图。可以用于确定关键的点对应的特征值，比如SHAP值为0的点对应的特征值，或者曲线的拐点。技巧：曲线寻找拐点的时候，可以调高参数n_knots，使其更加精细地拟合数据，借此找到拐点。'
+        '说明：限制性立方样条曲线拟合以上的散点图。可以用于确定关键的点对应的特征值，比如SHAP值为0的点对应的特征值，或者曲线的拐点。\n'
+        '技巧：曲线寻找拐点的时候，可以调高参数n_knots，使其更加精细地拟合数据，借此找到拐点。'
     '***'   
         #SHAP interaction values
     explainer_tree = shap.TreeExplainer(model)
@@ -128,26 +127,27 @@ if __name__ == '__main__':
     # # st_shap(shap.plots.waterfall(shap_values[0]), height=400)
     #     st_shap(shap.force_plot(explainer_tree.expected_value, shap_values_tree[0:num,:], X_display.iloc[0:num,:]), height=400, width=800)
     #     # st_shap(shap.force_plot(explainer_tree.expected_value, shap_values_tree[:num,:], X_display.iloc[:num,:]), height=400)#
-    #-----------------------------多因素回归----------------------------------
+    #-----------------------------多因素回归----------------------------------------------------------------------------
     with st.container():
-        st.header('多因素线性回归分析')
-        '在确定了数据的关键点之后，关键点前后的数据趋势是不同的，可以通过多因素线性回归分析来描述关键点前后的趋势，包括给出OR（RR）值，以及相应的统计P值。'
-        key_num=st.number_input('关键转折点', min_value=min(plot_data[select_var]), max_value=max(plot_data[select_var]),  value=np.median(plot_data[select_var]), step=1.0)
+        st.header('单因素回归分析')
+        '在通过RCS拟合确定了数据的关键点之后，如果发现关键点前后的数据趋势是不同的，可以通过单因素线性回归来进一步描述关键点前后的趋势，包括给出OR（RR）值，以及相应的统计P值。'
+        key_num=st.number_input('关键转折点', min_value=min(single_plot_data[select_var]), max_value=max(single_plot_data[select_var]),  value=np.median(single_plot_data[select_var]), step=1.0)
         direction=st.radio('拟合方向',('关键点之前','关键点之后'),horizontal=True)
-        outcome=st.session_state.outcome
+        # outcome=st.session_state.outcome
         
-        df_liner=pd.concat([st.session_state.X[selected_features],st.session_state.y],axis=1)
+        # single_plot_data=pd.concat([st.session_state.X[selected_features],st.session_state.y],axis=1)
         #筛选数据，使用原始数据，而不是SHAP数据
         if direction=='关键点之前':
-            X_liner=df_liner[df_liner[select_var]<=key_num][selected_features]
-            y_liner=df_liner[df_liner[select_var]<=key_num][outcome]
+            X_liner=single_plot_data[single_plot_data[select_var]<=key_num][select_var]
+            y_liner=single_plot_data[single_plot_data[select_var]<=key_num]['shap_'+select_var]
         else:
-            X_liner=df_liner[df_liner[select_var]>key_num][selected_features]
-            y_liner=df_liner[df_liner[select_var]>key_num][outcome]
+            X_liner=single_plot_data[single_plot_data[select_var]>key_num][select_var]
+            y_liner=single_plot_data[single_plot_data[select_var]>key_num]['shap_'+select_var]
 
-        model_liner_fit=load_model_liner(X_liner,y_liner,model_type)
+        model_liner_fit=load_model_liner(X_liner,np.abs(y_liner))
         st.write(model_liner_fit.summary())
+        '说明：因为SHAP值的正负代表了预测值的变化的方向，并不是数据的大小，所以在进行单因素分析的时候对SHAP值做了取绝对值的处理。'
         
-        plot=px.scatter(data_frame=df_liner,x=select_var,y=outcome,title='原始数据的散点图')
-        st.plotly_chart(plot)
+        # plot=px.scatter(data_frame=single_plot_data,x=select_var,y=outcome,title='原始数据的散点图')
+        # st.plotly_chart(plot)
             

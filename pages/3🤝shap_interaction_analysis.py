@@ -37,14 +37,15 @@ if __name__ == '__main__':
         st.plotly_chart(heat)
         '说明：SHAP交互作用值热力图，可视化特征之间的交互，可以展示特征之间的关联性。'
         
-    #-------------------shap 依赖性图
-    '***'
+    # #-------------------shap 依赖性图-----------------------------------------------
+    # '***'
     # with st.container():
     #     st.header('SHAP 依赖性图')
-    #     st_shap(shap.dependence_plot(select_var,shap_values, selcected_features, show= False),height=400)
+    #     # st.write(shap_values)
+    #     st_shap(shap.dependence_plot(select_var,shap_values, X),height=400)
     #     '说明：SHAP 依赖性图，可视化特征之间的交互，可以展示特征之间的关联性。'
         
-    #-------------------限制性立方样条曲线拟合----------
+    #-------------------限制性立方样条曲线拟合---------------------------------------
     '***'
     with st.container():
         st.header('限制性立方样条曲线拟合')
@@ -56,7 +57,9 @@ if __name__ == '__main__':
         
         selected_df=pd.DataFrame({select_var:selected_x,'shap_'+select_var:selected_y})
         
-        subgroup_feature=st.selectbox('选择分层变量(要求是分组变量)',selcected_features)
+        selcected_features2=np.delete(selcected_features, np.where(selcected_features==select_var))
+        
+        subgroup_feature=st.selectbox('选择分层变量(要求是分组变量)',selcected_features2)
         
         with col1:
             n_knots=st.slider("n_knots", 2, 10, 3, 1)
@@ -82,10 +85,8 @@ if __name__ == '__main__':
         
         combined_df['y_plot']=y_plot
         
-        # subgroup_df=combined_df[combined_df[subgroup_feature]==label]
             #分层数据            
         fig_subgroup=px.scatter(combined_df,x=select_var,y='shap_'+select_var,color=subgroup_feature,title='分层数据的散点图')
-        # fig_subgroup=go.Figure(data_subgroup,layout=go.Layout(title=go.layout.Title(text='限制性立方样条曲线拟合')))
         fig_subgroup.add_trace(go.Scatter(x=x_spline,y=y_plot,mode='lines',name='spline',line=dict(color='red')))
 
         st.plotly_chart(fig_subgroup)
@@ -98,9 +99,16 @@ if __name__ == '__main__':
     with st.container():
         st.header('分层单因素回归分析')
         '根据交互作用变量进行分组，如果数据的趋势发生变化，说明变量间具有交互作用。'
-        label=st.selectbox('选择亚组变量的标签)',combined_df[subgroup_feature].unique())
-        X_subgroup=combined_df[combined_df[subgroup_feature]==label][select_var].values
-        y_subgroup=combined_df[combined_df[subgroup_feature]==label]['shap_sum'].values
+        label=st.selectbox('选择亚组变量的标签',combined_df[subgroup_feature].unique())
+        key_number=st.number_input("设置"+select_var+"切点", min_value=0.0, max_value=float(max(combined_df[select_var])), value=float(np.median(combined_df[select_var])), step=1.0)
+        direction=st.radio('拟合方向',('关键点之前','关键点之后'),horizontal=True)
+        if direction=='关键点之前':
+            X_subgroup=combined_df[(combined_df[subgroup_feature]==label)&(combined_df[select_var]<=key_number)][select_var].values
+            y_subgroup=combined_df[(combined_df[subgroup_feature]==label)&(combined_df[select_var]<=key_number)]['shap_sum'].values
+        else:
+            X_subgroup=combined_df[(combined_df[subgroup_feature]==label)&(combined_df[select_var]>key_number)][select_var].values
+            y_subgroup=combined_df[(combined_df[subgroup_feature]==label)&(combined_df[select_var]>key_number)]['shap_sum'].values
+            
         model_liner = load_model_liner(X=X_subgroup, y=np.abs(y_subgroup))
         st.write(model_liner.summary())
             
